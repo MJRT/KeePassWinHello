@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -522,21 +523,27 @@ namespace KeePassWinHello
         {
 #if DEBUG
             private const string CredentialDialogClass = null;
+            private const string CredentialDialogTitle = "Windows Security";
 #else
             private const string CredentialDialogClass = "Credential Dialog Xaml Host";
+            private const string CredentialDialogTitle = null;
 #endif
-            private const string CredentialDialogTitle = "Windows Security";
             private const int DialogAppearanceTimeoutMs = 5000;
             private const int EnforcementAttempts = 20;
             private const int EnforcementIntervalMs = 100;
 
+            private readonly ICollection<IntPtr> _existingDialogs;
             private volatile bool _stopped;
 
-            private CredentialDialogForegroundEnforcer() { }
+            private CredentialDialogForegroundEnforcer(ICollection<IntPtr> existingDialogs)
+            {
+                _existingDialogs = existingDialogs;
+            }
 
             public static IDisposable Start()
             {
-                var enforcer = new CredentialDialogForegroundEnforcer();
+                var existingDialogs = Win32Window.FindAll(CredentialDialogClass);
+                var enforcer = new CredentialDialogForegroundEnforcer(existingDialogs);
                 try
                 {
                     Win32Window.AllowAllSetForeground();
@@ -554,14 +561,13 @@ namespace KeePassWinHello
             {
                 try
                 {
-                    var dialog = Win32Window.Find(CredentialDialogClass, CredentialDialogTitle, DialogAppearanceTimeoutMs);
+                    var dialog = Win32Window.FindNew(CredentialDialogClass, CredentialDialogTitle, _existingDialogs, DialogAppearanceTimeoutMs);
                     for (int i = 0; i < EnforcementAttempts && !_stopped && dialog != null; ++i)
                     {
                         if (dialog.IsWindowOnForeground())
                             return;
                         try { dialog.EnsureForeground(); } catch { }
                         Thread.Sleep(EnforcementIntervalMs);
-                        dialog = Win32Window.Find(CredentialDialogClass, CredentialDialogTitle);
                     }
                 }
                 catch (Exception ex)

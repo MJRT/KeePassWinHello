@@ -1,0 +1,61 @@
+name: Build patched plugin
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/windows-hello-face
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      KEEPASS_VERSION: 2.61.1
+      KEEPASS_SHA256: 3952354DB9B117E906F7CD4F9F5591065B95186472370DA47F46F3E246FEA864
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download verified KeePass portable
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "KeePass-$env:KEEPASS_VERSION.zip"
+          $url = "https://downloads.sourceforge.net/project/keepass/KeePass%202.x/$env:KEEPASS_VERSION/KeePass-$env:KEEPASS_VERSION.zip"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+
+          $actualHash = (Get-FileHash $archive -Algorithm SHA256).Hash
+          if ($actualHash -ne $env:KEEPASS_SHA256) {
+            throw "KeePass archive SHA-256 mismatch: $actualHash"
+          }
+
+          New-Item -ItemType Directory -Path lib -Force | Out-Null
+          Expand-Archive -Path $archive -DestinationPath lib -Force
+
+      - name: Compile against KeePass
+        shell: pwsh
+        run: dotnet build src/KeePassWinHello.Debug.csproj --configuration Release -p:DefineConstants=MONO
+
+      - name: Create PLGX
+        shell: pwsh
+        run: .\Pack-Plugin.ps1 -SkipChoco
+
+      - name: Create checksum
+        shell: pwsh
+        run: |
+          $plugin = Resolve-Path releases/KeePassWinHelloPlugin.plgx
+          $hash = (Get-FileHash $plugin -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  KeePassWinHelloPlugin.plgx" | Set-Content releases/KeePassWinHelloPlugin.plgx.sha256 -Encoding ascii
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeePassWinHello-${{ github.sha }}
+          path: |
+            releases/KeePassWinHelloPlugin.plgx
+            releases/KeePassWinHelloPlugin.plgx.sha256
+          if-no-files-found: error
+          retention-days: 30
