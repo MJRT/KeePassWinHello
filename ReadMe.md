@@ -1,6 +1,13 @@
 Quick unlock with Windows Hello for KeePass 2
 =============================================
 
+Fork status
+-----------
+
+This fork keeps the upstream KeePassWinHello 3.3.1 behavior and adds fixes for Windows Hello face unlock failures seen as `NCryptDecrypt: 0x80098044 (WINBIO_E_INVALID_TICKET)` on a fresh KeePass launch.
+
+It includes the upstream fixes from [#159](https://github.com/sirAndros/KeePassWinHello/pull/159) and [#163](https://github.com/sirAndros/KeePassWinHello/pull/163), including support for localized Windows Security dialog titles. Prebuilt `.plgx` packages are available from this fork's [Releases](https://github.com/MJRT/KeePassWinHello/releases).
+
 [![Build Status](https://travis-ci.org/sirAndros/KeePassWinHello.svg?branch=master)](https://travis-ci.org/sirAndros/KeePassWinHello)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=sirAndros_KeePassWinHello&metric=alert_status)](https://sonarcloud.io/dashboard?id=sirAndros_KeePassWinHello)
 [![GitHub All Releases](https://img.shields.io/github/downloads/sirAndros/KeePassWinHello/total)](https://github.com/sirAndros/KeePassWinHello/releases)
