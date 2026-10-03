@@ -25,7 +25,10 @@ jobs:
         run: |
           $archive = Join-Path $env:RUNNER_TEMP "KeePass-$env:KEEPASS_VERSION.zip"
           $url = "https://downloads.sourceforge.net/project/keepass/KeePass%202.x/$env:KEEPASS_VERSION/KeePass-$env:KEEPASS_VERSION.zip"
-          Invoke-WebRequest -Uri $url -OutFile $archive
+          & curl.exe --fail --location --retry 3 --output $archive $url
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download KeePass portable archive"
+          }
 
           $actualHash = (Get-FileHash $archive -Algorithm SHA256).Hash
           if ($actualHash -ne $env:KEEPASS_SHA256) {
